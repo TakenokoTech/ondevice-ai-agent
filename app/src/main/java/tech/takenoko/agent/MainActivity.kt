@@ -12,8 +12,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.Dispatcher
 import tech.takenoko.agent.usecase.LoadModelUseCase
+import tech.takenoko.agent.view.TalkFragment
 
 class MainActivity : AppCompatActivity() {
+
+    private val talkFragment: TalkFragment by lazy {
+        supportFragmentManager.findFragmentById(R.id.talk_fragment) as TalkFragment
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -26,9 +32,12 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             val model = LoadModelUseCase(applicationContext).execute()
-            model.infer {
+            withContext(Dispatchers.Main) {
+                talkFragment.updateText(true, "こんにちは")
+            }
+            model.infer("こんにちは") {
                 launch(Dispatchers.Main) {
-                    findViewById<TextView>(R.id.text).text = it
+                    talkFragment.updateText(false, it)
                 }
             }
         }

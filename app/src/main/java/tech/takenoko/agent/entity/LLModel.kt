@@ -20,16 +20,16 @@ class LLModel(
             context,
             LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(file.path)
-                .setMaxTopK(64)
+                .setMaxTopK(8 /*64*/)
                 .build(),
         )
         println("LlmInference created successfully")
     }
 
-    suspend fun infer(updated: (String) -> Unit): String {
+    suspend fun infer(prompt: String, updated: (String) -> Unit): String {
         println("Starting inference...")
         val resultText = AtomicReference("")
-        val result = inference.generateResponseAsync("こんにちは") { partialResult, done ->
+        val result = inference.generateResponseAsync(prompt) { partialResult, done ->
             println("Partial result: $partialResult, done: $done")
             resultText.updateAndGet { it + partialResult }
             updated(resultText.get())
