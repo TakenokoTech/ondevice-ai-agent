@@ -3,6 +3,12 @@
     <style name="Base.Theme.Ondeviceaiagent" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="colorPrimary">#155fa0</item>
+        <item name="colorPrimaryVariant">#1e88e5</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">#2a3eb1</item>
+        <item name="colorSecondaryVariant">#3d5afe</item>
+        <item name="colorOnSecondary">@color/black</item>
     </style>
 
     <style name="Theme.Ondeviceaiagent" parent="Base.Theme.Ondeviceaiagent" />
