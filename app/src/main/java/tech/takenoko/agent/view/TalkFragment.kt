@@ -82,10 +82,11 @@ class TalkFragment : Fragment() {
         action: () -> Unit = { },
     ) = lifecycleScope.launch(Dispatchers.Main) {
         val adapter = recyclerViewAdapter
-        if (adapter.items.lastOrNull()?.type == messageType) adapter.items.removeLastOrNull()
+        val update = adapter.items.lastOrNull()?.type == messageType
+        if (update) adapter.items.removeLastOrNull()
         adapter.items.add(Message(messageType, text, action))
         adapter.notifyItemChanged(adapter.items.lastIndex)
-        binding.recyclerView.scrollToPosition(adapter.items.lastIndex)
+        if (!update) binding.recyclerView.smoothScrollToPosition(adapter.items.lastIndex)
     }
 
     private class RecyclerViewAdapter : RecyclerView.Adapter<RecyclerViewAdapter.ViewHolder>() {
