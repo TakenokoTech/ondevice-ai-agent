@@ -1,9 +1,7 @@
 package tech.takenoko.agent.entity
 
 import android.content.Context
-import android.net.http.HeaderBlock
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
-import com.google.mediapipe.tasks.genai.llminference.ProgressListener
 import kotlinx.coroutines.guava.await
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
@@ -20,6 +18,7 @@ class LLModel(
             context,
             LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(file.path)
+                .setPreferredBackend(LlmInference.Backend.DEFAULT)
                 .setMaxTopK(8 /*64*/)
                 .build(),
         )

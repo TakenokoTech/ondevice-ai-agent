@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlinx.serialization)
 }
 
 android {
@@ -54,6 +55,8 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    implementation("androidx.compose.material3:material3:1.3.2")
     implementation("com.squareup.retrofit2:retrofit:3.0.+")
     implementation("androidx.concurrent:concurrent-futures:1.3.+")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.6.+")

@@ -4,4 +4,6 @@
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="send">Send</string>
     <string name="send_hint">Enter your message.</string>
+    <string name="approve">Approve</string>
+    <string name="approve_request">Approve Request</string>
 </resources>

@@ -15,9 +15,10 @@ class LoadModelUseCase(
     private val client: OkHttpClient = OkHttpClient(),
 ) {
     suspend fun execute(): LLModel {
+        if (modelMap.containsKey(MODEL_ID)) return modelMap.getValue(MODEL_ID)
         val file = File(context.cacheDir, MODEL_FILE)
         if (!file.exists()) download(file)
-        return LLModel(context, file)
+        return LLModel(context, file).also { modelMap[MODEL_ID] = it }
     }
 
     private suspend fun download(outFile: File) = withContext(Dispatchers.IO) {
@@ -30,17 +31,25 @@ class LoadModelUseCase(
             check(response.isSuccessful) { "\"HTTP error: ${response.code}" }
             val inputStream = response.body?.byteStream() ?: error("Response body is null")
             val contentLength = response.body?.contentLength() ?: error("Response body is null")
+            var lastProgress = -1L // 前回表示した進捗率
             inputStream.use { input ->
                 FileOutputStream(outFile).use { output ->
-                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE * 1024)
                     var bytesCopied: Long = 0
                     var bytes = input.read(buffer)
                     while (bytes >= 0) {
                         output.write(buffer, 0, bytes)
                         bytesCopied += bytes
-                        if (contentLength > 0) {
-                            val progress = (bytesCopied * 100) / contentLength
-                            println("Download progress: ${progress.toInt()}%")
+
+                        val progress = (bytesCopied * 100) / contentLength
+                        val bytesCopiedBytes = (bytesCopied / 1024 / 1024).toInt()
+                        val contentLengthBytes = (contentLength / 1024 / 1024).toInt()
+                        if (contentLength > 0 && lastProgress != progress) {
+                            lastProgress = progress
+                            println(
+                                "Download progress: ${progress.toInt()}% " +
+                                    "(${bytesCopiedBytes}MB/${contentLengthBytes}MB)",
+                            )
                         }
                         bytes = input.read(buffer)
                     }
@@ -50,8 +59,12 @@ class LoadModelUseCase(
     }
 
     companion object {
+        // private const val MODEL_ID = "google/gemma-3n-E4B-it-litert-preview"
+        // private const val MODEL_FILE = "gemma-3n-E4B-it-int4.task"
         private const val MODEL_ID = "google/gemma-3n-E2B-it-litert-preview"
         private const val MODEL_FILE = "gemma-3n-E2B-it-int4.task"
-        private const val MODEL_URL = "https://huggingface.co/$MODEL_ID/resolve/main/$MODEL_FILE?download=true"
+        private const val MODEL_URL =
+            "https://huggingface.co/$MODEL_ID/resolve/main/$MODEL_FILE?download=true"
+        private val modelMap = mutableMapOf<String, LLModel>()
     }
 }

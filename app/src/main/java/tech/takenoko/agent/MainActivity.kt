@@ -11,6 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.Dispatcher
+import tech.takenoko.agent.entity.LLModel
+import tech.takenoko.agent.entity.MessageType
 import tech.takenoko.agent.usecase.LoadModelUseCase
 import tech.takenoko.agent.view.TalkFragment
 
@@ -31,14 +33,18 @@ class MainActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
+            return@launch
             val model = LoadModelUseCase(applicationContext).execute()
             withContext(Dispatchers.Main) {
-                talkFragment.updateText(true, "こんにちは")
+                talkFragment.updateText(MessageType.USER, "こんにちは")
             }
             model.infer("こんにちは") {
                 launch(Dispatchers.Main) {
-                    talkFragment.updateText(false, it)
+                    talkFragment.updateText(MessageType.AGENT, it)
                 }
+            }
+            withContext(Dispatchers.Main) {
+                talkFragment.updateText(MessageType.APPROVE, "こんにちは")
             }
         }
     }

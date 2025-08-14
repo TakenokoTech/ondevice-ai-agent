@@ -6,10 +6,19 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.button.MaterialButton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import tech.takenoko.agent.R
 import tech.takenoko.agent.databinding.FragmentTalkBinding
+import tech.takenoko.agent.entity.Message
+import tech.takenoko.agent.entity.MessageType
+import tech.takenoko.agent.usecase.CallActionUseCase
+import tech.takenoko.agent.usecase.ChoiceActionUseCase
+import tech.takenoko.agent.usecase.LoadModelUseCase
 
 class TalkFragment : Fragment() {
     private lateinit var binding: FragmentTalkBinding
@@ -39,36 +48,87 @@ class TalkFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerView.adapter = recyclerViewAdapter
+        binding.button.setOnClickListener {
+            val inputText = binding.inputText.text.toString()
+            if (!inputText.isNotBlank()) return@setOnClickListener
+            updateText(MessageType.USER, inputText)
+            updateText(MessageType.AGENT, "...")
+            binding.inputText.text.clear()
+            lifecycleScope.launch {
+                val model = LoadModelUseCase(requireContext()).execute()
+                val action = ChoiceActionUseCase().execute(model, inputText) { response ->
+                    launch(Dispatchers.Main) {
+                        updateText(MessageType.AGENT, response)
+                    }
+                }
+                launch(Dispatchers.Main) {
+                    updateText(MessageType.APPROVE, action.name) {
+                        val text = CallActionUseCase().execute(action).toString()
+                        updateText(MessageType.ACTION, text)
+                        lifecycleScope.launch {
+                            model.infer("結果は${text}でした。説明してください。") {
+                                updateText(MessageType.AGENT, it)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    fun updateText(isUser: Boolean, text: String) {
+    fun updateText(
+        messageType: MessageType,
+        text: String,
+        action: () -> Unit = { },
+    ) = lifecycleScope.launch(Dispatchers.Main) {
         val adapter = recyclerViewAdapter
-        if (adapter.items.lastOrNull()?.first == isUser) adapter.items.removeLastOrNull()
-        adapter.items.add(isUser to text)
+        if (adapter.items.lastOrNull()?.type == messageType) adapter.items.removeLastOrNull()
+        adapter.items.add(Message(messageType, text, action))
         adapter.notifyItemChanged(adapter.items.lastIndex)
+        binding.recyclerView.scrollToPosition(adapter.items.lastIndex)
     }
 
     private class RecyclerViewAdapter : RecyclerView.Adapter<RecyclerViewAdapter.ViewHolder>() {
-        val items: MutableList<Pair<Boolean, String>> = mutableListOf()
+        val items: MutableList<Message> = mutableListOf()
+
         class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val textView: TextView = view.findViewById(R.id.textView)
+            val approveButton: MaterialButton? = view.findViewById(R.id.approveButton)
         }
+
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder = when (viewType) {
-            0 -> ViewHolder(
+            MessageType.USER.ordinal -> ViewHolder(
                 LayoutInflater.from(
                     parent.context,
                 ).inflate(R.layout.list_item_user, parent, false),
             )
-            else -> ViewHolder(
+
+            MessageType.AGENT.ordinal -> ViewHolder(
                 LayoutInflater.from(
                     parent.context,
                 ).inflate(R.layout.list_item_agent, parent, false),
             )
+
+            MessageType.APPROVE.ordinal -> ViewHolder(
+                LayoutInflater.from(
+                    parent.context,
+                ).inflate(R.layout.list_item_approve, parent, false),
+            )
+
+            MessageType.ACTION.ordinal -> ViewHolder(
+                LayoutInflater.from(
+                    parent.context,
+                ).inflate(R.layout.list_item_agent, parent, false),
+            )
+
+            else -> TODO()
         }
+
         override fun getItemCount(): Int = items.count()
-        override fun getItemViewType(position: Int): Int = if (items[position].first) 0 else 1
+        override fun getItemViewType(position: Int): Int = items[position].type.ordinal
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            holder.textView.text = items[position].second
+            holder.textView.text = items[position].text
+            holder.approveButton?.setOnClickListener { items[position].action() }
         }
     }
 
