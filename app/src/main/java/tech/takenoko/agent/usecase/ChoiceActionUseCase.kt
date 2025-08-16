@@ -10,11 +10,13 @@ class ChoiceActionUseCase {
         model: LLModel,
         input: String,
         updated: (String) -> Unit,
-    ): Action {
+    ): Action? {
         val res = model.infer(PROMPT.format(input)) {
             updated(it.trimCodeBlock())
         }
-        return Json.decodeFromString<Action>(res.trimCodeBlock())
+        return runCatching {
+            Json.decodeFromString<Action>(res.trimCodeBlock())
+        }.getOrNull()
     }
 
     fun String.trimCodeBlock() = this

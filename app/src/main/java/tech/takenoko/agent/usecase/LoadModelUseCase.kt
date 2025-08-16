@@ -7,6 +7,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import tech.takenoko.agent.BuildConfig
 import tech.takenoko.agent.entity.LLModel
+import tech.takenoko.agent.entity.ModelConfig
 import java.io.File
 import java.io.FileOutputStream
 
@@ -24,7 +25,7 @@ class LoadModelUseCase(
     private suspend fun download(outFile: File) = withContext(Dispatchers.IO) {
         val request = Request
             .Builder()
-            .url(MODEL_URL)
+            .url(MODEL_URL.format(MODEL_ID, MODEL_FILE))
             .addHeader("Authorization", "Bearer ${BuildConfig.HF_TOKEN}")
             .build()
         client.newCall(request).execute().use { response ->
@@ -61,10 +62,13 @@ class LoadModelUseCase(
     companion object {
         // private const val MODEL_ID = "google/gemma-3n-E4B-it-litert-preview"
         // private const val MODEL_FILE = "gemma-3n-E4B-it-int4.task"
-        private const val MODEL_ID = "google/gemma-3n-E2B-it-litert-preview"
-        private const val MODEL_FILE = "gemma-3n-E2B-it-int4.task"
-        private const val MODEL_URL =
-            "https://huggingface.co/$MODEL_ID/resolve/main/$MODEL_FILE?download=true"
+        // private const val MODEL_ID = "google/gemma-3n-E2B-it-litert-preview"
+        // private const val MODEL_FILE = "gemma-3n-E2B-it-int4.task"
+        // private const val MODEL_ID = "litert-community/gemma-3-270m-it"
+        // private const val MODEL_FILE = "gemma3-270m-it-q8.task"
+        private val MODEL_ID = ModelConfig.GEMMA_3N_E2B.modelId
+        private val MODEL_FILE = ModelConfig.GEMMA_3N_E2B.modelFile
+        private const val MODEL_URL = "https://huggingface.co/%s/resolve/main/%s?download=true"
         private val modelMap = mutableMapOf<String, LLModel>()
     }
 }

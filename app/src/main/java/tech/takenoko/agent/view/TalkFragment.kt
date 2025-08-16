@@ -60,7 +60,7 @@ class TalkFragment : Fragment() {
                     launch(Dispatchers.Main) {
                         updateText(MessageType.AGENT, response)
                     }
-                }
+                } ?: return@launch
                 launch(Dispatchers.Main) {
                     updateText(MessageType.APPROVE, action.name) {
                         val text = CallActionUseCase().execute(action).toString()
