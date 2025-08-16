@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -9,6 +11,7 @@ android {
     compileSdk = 36
 
     buildFeatures {
+        viewBinding = true
         buildConfig = true
     }
 
@@ -19,7 +22,9 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "HF_TOKEN", "\"${project.findProperty("HF_TOKEN")}\"")
+
+        val prop = Properties().apply { load(rootProject.file("local.properties").inputStream()) }
+        buildConfigField("String", "HF_TOKEN", "\"${prop.getProperty("HF_TOKEN")}\"")
     }
 
     buildTypes {
@@ -37,9 +42,6 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
-    }
-    buildFeatures {
-        viewBinding = true
     }
 }
 
