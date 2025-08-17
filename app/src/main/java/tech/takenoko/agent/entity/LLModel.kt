@@ -23,6 +23,7 @@ class LLModel(
                 .setModelPath(file.path)
                 .setPreferredBackend(LlmInference.Backend.DEFAULT)
                 .setMaxTopK(8 /*64*/)
+                .setMaxTokens(1024)
                 .build(),
         )
         session = LlmInferenceSession.createFromOptions(

@@ -13,9 +13,6 @@ import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import tech.takenoko.agent.R
 import tech.takenoko.agent.databinding.FragmentTalkBinding
 import tech.takenoko.agent.entity.Action
@@ -56,25 +53,28 @@ class TalkFragment : Fragment() {
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerView.adapter = recyclerViewAdapter
         binding.button.setOnClickListener {
-            val inputText = binding.inputText.text.toString()
-            if (!inputText.isNotBlank()) return@setOnClickListener
-            updateText(MessageType.USER, inputText)
-            updateText(MessageType.AGENT, "...")
-            binding.inputText.text.clear()
+            val inputText = userInput() ?: return@setOnClickListener
             lifecycleScope.launch {
                 val model = LoadModelUseCase(requireContext()).execute()
                 val action = ChoiceActionUseCase().execute(model, inputText) { response ->
                     updateText(MessageType.AGENT, response)
                 } ?: return@launch
                 delay(1000)
-                action.functions.forEach { function ->
-                    approve(function.name, function)
+                val args = action.functions.associate { function ->
+                    function.returnVar to approve(function.name, function)
                 }
-                model.infer(action.next.prompt) {
-                    updateText(MessageType.AGENT, it)
-                }
+                answer(action.next.prompt, args)
             }
         }
+    }
+
+    private fun userInput(): String? {
+        val inputText = binding.inputText.text.toString()
+        if (!inputText.isNotBlank()) return null
+        updateText(MessageType.USER, inputText)
+        updateText(MessageType.AGENT, "...")
+        binding.inputText.text.clear()
+        return inputText
     }
 
     private suspend fun approve(name: String, function: Action.Function) = suspendCoroutine { continuation ->
@@ -82,9 +82,17 @@ class TalkFragment : Fragment() {
             updateText(MessageType.APPROVE, name) {
                 val text = CallActionUseCase().execute(function).toString()
                 updateText(MessageType.ACTION, text)
-                continuation.resume(Unit)
+                continuation.resume(text)
             }
         }
+    }
+
+    private fun answer(prompt: String, args: Map<String, String>) {
+        var replacedPrompt = prompt
+        args.forEach { k, v ->
+            replacedPrompt = replacedPrompt.replace(Regex("\\{${k}\\}"), v)
+        }
+        updateText(MessageType.AGENT, replacedPrompt)
     }
 
     fun updateText(
