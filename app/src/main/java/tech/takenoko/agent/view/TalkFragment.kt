@@ -11,14 +11,21 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import tech.takenoko.agent.R
 import tech.takenoko.agent.databinding.FragmentTalkBinding
+import tech.takenoko.agent.entity.Action
 import tech.takenoko.agent.entity.Message
 import tech.takenoko.agent.entity.MessageType
 import tech.takenoko.agent.usecase.CallActionUseCase
 import tech.takenoko.agent.usecase.ChoiceActionUseCase
 import tech.takenoko.agent.usecase.LoadModelUseCase
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 class TalkFragment : Fragment() {
     private lateinit var binding: FragmentTalkBinding
@@ -57,21 +64,25 @@ class TalkFragment : Fragment() {
             lifecycleScope.launch {
                 val model = LoadModelUseCase(requireContext()).execute()
                 val action = ChoiceActionUseCase().execute(model, inputText) { response ->
-                    launch(Dispatchers.Main) {
-                        updateText(MessageType.AGENT, response)
-                    }
+                    updateText(MessageType.AGENT, response)
                 } ?: return@launch
-                launch(Dispatchers.Main) {
-                    updateText(MessageType.APPROVE, action.name) {
-                        val text = CallActionUseCase().execute(action).toString()
-                        updateText(MessageType.ACTION, text)
-                        lifecycleScope.launch {
-                            model.infer("結果は${text}でした。説明してください。") {
-                                updateText(MessageType.AGENT, it)
-                            }
-                        }
-                    }
+                delay(1000)
+                action.functions.forEach { function ->
+                    approve(function.name, function)
                 }
+                model.infer(action.next.prompt) {
+                    updateText(MessageType.AGENT, it)
+                }
+            }
+        }
+    }
+
+    private suspend fun approve(name: String, function: Action.Function) = suspendCoroutine { continuation ->
+        lifecycleScope.launch {
+            updateText(MessageType.APPROVE, name) {
+                val text = CallActionUseCase().execute(function).toString()
+                updateText(MessageType.ACTION, text)
+                continuation.resume(Unit)
             }
         }
     }
@@ -79,7 +90,7 @@ class TalkFragment : Fragment() {
     fun updateText(
         messageType: MessageType,
         text: String,
-        action: () -> Unit = { },
+        action: suspend () -> Unit = { },
     ) = lifecycleScope.launch(Dispatchers.Main) {
         val adapter = recyclerViewAdapter
         val update = adapter.items.lastOrNull()?.type == messageType
@@ -89,10 +100,10 @@ class TalkFragment : Fragment() {
         if (!update) binding.recyclerView.smoothScrollToPosition(adapter.items.lastIndex)
     }
 
-    private class RecyclerViewAdapter : RecyclerView.Adapter<RecyclerViewAdapter.ViewHolder>() {
+    private inner class RecyclerViewAdapter : RecyclerView.Adapter<RecyclerViewAdapter.ViewHolder>() {
         val items: MutableList<Message> = mutableListOf()
 
-        class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val textView: TextView = view.findViewById(R.id.textView)
             val approveButton: MaterialButton? = view.findViewById(R.id.approveButton)
         }
@@ -129,7 +140,9 @@ class TalkFragment : Fragment() {
         override fun getItemViewType(position: Int): Int = items[position].type.ordinal
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             holder.textView.text = items[position].text
-            holder.approveButton?.setOnClickListener { items[position].action() }
+            holder.approveButton?.setOnClickListener {
+                lifecycleScope.launch { items[position].action() }
+            }
         }
     }
 

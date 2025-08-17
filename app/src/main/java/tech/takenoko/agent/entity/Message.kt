@@ -3,7 +3,7 @@ package tech.takenoko.agent.entity
 data class Message(
     val type: MessageType,
     val text: String,
-    val action: () -> Unit = {},
+    val action: suspend () -> Unit = {},
     // val timestamp: Long,
 )
 

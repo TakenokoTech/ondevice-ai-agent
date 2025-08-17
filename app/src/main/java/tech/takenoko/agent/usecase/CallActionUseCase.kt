@@ -3,9 +3,9 @@ package tech.takenoko.agent.usecase
 import tech.takenoko.agent.entity.Action
 
 class CallActionUseCase {
-    fun execute(action: Action): Any {
+    fun execute(action: Action.Function): Any {
         println("action: ${action.name}")
-        return when (action.name) {
+        return when (action.name.trimEnd(*"()".toCharArray())) {
             "getCurrentLocation" -> getCurrentLocation()
             "getWeather" -> getWeather(requireNotNull(action.arguments["city"]))
             "sendNotification" -> sendNotification(requireNotNull(action.arguments["message"]))

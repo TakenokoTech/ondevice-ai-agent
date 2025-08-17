@@ -26,20 +26,30 @@ class ChoiceActionUseCase {
 
     companion object {
         private val PROMPT = """
-        あなたはAndroidアプリ内で動作する関数呼び出しアシスタントです。
+        あなたは関数呼び出しアシスタントです。
+        一度に複数の関数を呼び出すことができます。
+        関数呼び出しの結果は次のプロンプトで使用されます。
         
         利用可能な関数：
         - getCurrentLocation(): 現在地を取得します。
-        - getWeather(city: string): 天気を取得します。必ずcityキーを含めてください。
-        - sendNotification(message: string): 端末に通知を送ります。messageキー必須。
+        - getWeather(city: string): 天気を取得します。city必須。
+        - sendNotification(message: string): 端末に通知を送ります。message必須。
         
         出力は以下のJSON形式のみ許容されます。他の文章は一切禁止です。
         
         {
-          "name": "関数名",
-          "arguments": {
-            "key1": "value1",
-            "key2": "value2"
+          "functions": [
+            {
+              "name": "関数名（括弧などは不要）",
+              "returnVar": "関数の戻り値の変数名（後続処理で使用）"
+              "arguments": {
+                "key1": "value1",
+                "key2": "value2"
+              }
+            }
+          ],
+          "next": {
+            "prompt": "functions後のプロンプト（変数は{returnVarの値}）",
           }
         }
         
